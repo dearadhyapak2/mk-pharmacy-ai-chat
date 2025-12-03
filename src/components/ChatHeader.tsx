@@ -1,4 +1,4 @@
-import { Menu, History } from "lucide-react";
+import { History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import pharmacyLogo from "@/assets/pharmacy-logo.jpg";
 
@@ -21,7 +21,7 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
           </div>
           <div>
             <h1 className="text-xl font-bold text-primary-foreground">
-              MK Pharmacy Hub
+              Mk pharmacy Hub AI
             </h1>
             <p className="text-sm text-primary-foreground/80">
               आपकी स्वास्थ्य सहायक
@@ -30,12 +30,12 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
         </div>
 
         <Button
-          variant="ghost"
-          size="icon"
           onClick={onHistoryClick}
-          className="text-primary-foreground hover:bg-primary-foreground/10"
+          variant="ghost"
+          className="flex items-center gap-2 text-primary-foreground hover:bg-primary-foreground/10 px-3"
         >
           <History className="h-5 w-5" />
+          <span className="text-sm font-medium">History</span>
         </Button>
       </div>
     </header>
