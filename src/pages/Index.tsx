@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 import ChatHeader from "@/components/ChatHeader";
 import ChatInput from "@/components/ChatInput";
 import ChatMessage from "@/components/ChatMessage";
@@ -19,7 +20,10 @@ interface Chat {
   messages: Message[];
 }
 
+const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
 const Index = () => {
+  const { toast } = useToast();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -37,34 +41,70 @@ const Index = () => {
     scrollToBottom();
   }, [messages]);
 
-  const generateAIResponse = (userMessage: string): string => {
-    const lowerMessage = userMessage.toLowerCase();
+  const streamChat = async (
+    chatMessages: { role: string; content: string }[],
+    onDelta: (text: string) => void,
+    onDone: () => void
+  ) => {
+    const resp = await fetch(CHAT_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify({ messages: chatMessages }),
+    });
 
-    if (lowerMessage.includes("owner") || lowerMessage.includes("मालिक") || lowerMessage.includes("किसने बनाया")) {
-      return "इस ऐप के मालिक मुकेश कुमार देशमुख हैं। वे गाँव चंगोरी, जिला दुर्ग से हैं।";
+    if (!resp.ok) {
+      const errorData = await resp.json().catch(() => ({}));
+      if (resp.status === 429) {
+        throw new Error(errorData.error || "बहुत ज्यादा requests, कृपया थोड़ी देर बाद कोशिश करें।");
+      }
+      if (resp.status === 402) {
+        throw new Error(errorData.error || "Credits समाप्त हो गए हैं।");
+      }
+      throw new Error(errorData.error || "AI से जुड़ने में समस्या हुई");
     }
 
-    if (lowerMessage.includes("पेरासिटामोल") || lowerMessage.includes("paracetamol")) {
-      return "पेरासिटामोल एक दर्द निवारक और बुखार कम करने वाली दवा है।\n\n📌 उपयोग:\n• बुखार में\n• सिरदर्द में\n• शरीर दर्द में\n\n⚠️ सावधानियां:\n• खाली पेट न लें\n• 24 घंटे में 4 से ज्यादा गोली न लें\n• शराब के साथ न लें\n\n💊 सामान्य खुराक: 500mg से 1000mg, हर 4-6 घंटे में";
+    if (!resp.body) throw new Error("No response body");
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let textBuffer = "";
+    let streamDone = false;
+
+    while (!streamDone) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      textBuffer += decoder.decode(value, { stream: true });
+
+      let newlineIndex: number;
+      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+        let line = textBuffer.slice(0, newlineIndex);
+        textBuffer = textBuffer.slice(newlineIndex + 1);
+
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (line.startsWith(":") || line.trim() === "") continue;
+        if (!line.startsWith("data: ")) continue;
+
+        const jsonStr = line.slice(6).trim();
+        if (jsonStr === "[DONE]") {
+          streamDone = true;
+          break;
+        }
+
+        try {
+          const parsed = JSON.parse(jsonStr);
+          const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+          if (content) onDelta(content);
+        } catch {
+          textBuffer = line + "\n" + textBuffer;
+          break;
+        }
+      }
     }
 
-    if (lowerMessage.includes("सर्दी") || lowerMessage.includes("जुकाम") || lowerMessage.includes("cold")) {
-      return "सर्दी-जुकाम में ये करें:\n\n🏠 घरेलू उपचार:\n• गर्म पानी पिएं\n• अदरक-तुलसी की चाय\n• भाप लें\n• शहद-नींबू का पानी\n\n💊 दवाइयां:\n• Cetirizine (एलर्जी के लिए)\n• पेरासिटामोल (बुखार हो तो)\n\n⚠️ डॉक्टर को दिखाएं अगर:\n• 3 दिन से ज्यादा बुखार रहे\n• सांस लेने में तकलीफ हो";
-    }
-
-    if (lowerMessage.includes("बुखार") || lowerMessage.includes("fever")) {
-      return "बुखार में ये घरेलू उपचार करें:\n\n🏠 तुरंत राहत के लिए:\n• माथे पर गीला कपड़ा रखें\n• हल्के कपड़े पहनें\n• खूब पानी पिएं\n\n🍵 पीने के लिए:\n• तुलसी-अदरक का काढ़ा\n• गिलोय का रस\n• नींबू पानी\n\n💊 दवाई:\n• पेरासिटामोल 500mg\n\n⚠️ 102°F से ज्यादा बुखार हो तो डॉक्टर को दिखाएं";
-    }
-
-    if (lowerMessage.includes("स्टोर") || lowerMessage.includes("रखें") || lowerMessage.includes("store")) {
-      return "दवाइयों को सही तरीके से रखने के टिप्स:\n\n📦 सही जगह:\n• ठंडी और सूखी जगह पर रखें\n• सीधी धूप से बचाएं\n• बच्चों की पहुंच से दूर रखें\n\n🌡️ तापमान:\n• कमरे के तापमान (25°C से नीचे) पर रखें\n• कुछ दवाइयां फ्रिज में रखें (पैकेट पर देखें)\n\n⚠️ ध्यान दें:\n• एक्सपायरी डेट जरूर चेक करें\n• पुरानी दवाइयां न खाएं";
-    }
-
-    if (lowerMessage.includes("नमस्ते") || lowerMessage.includes("hello") || lowerMessage.includes("hi")) {
-      return "नमस्ते! 🙏 मैं MK Pharmacy Hub AI हूं।\n\nमैं आपकी इन बातों में मदद कर सकता हूं:\n• दवाइयों की जानकारी\n• स्वास्थ्य सलाह\n• घरेलू उपचार\n• फार्मेसी से जुड़े सवाल\n\nकृपया अपना सवाल पूछें!";
-    }
-
-    return "धन्यवाद आपके सवाल के लिए! 🙏\n\nमैं आपकी मदद के लिए यहां हूं। कृपया अपना सवाल विस्तार से पूछें:\n\n• दवाई का नाम बताएं\n• अपनी समस्या बताएं\n• या कोई भी स्वास्थ्य संबंधी सवाल पूछें\n\nमैं सरल हिंदी में जवाब दूंगा।";
+    onDone();
   };
 
   const handleSendMessage = async (content: string, files?: File[]) => {
@@ -100,23 +140,60 @@ const Index = () => {
 
     setIsLoading(true);
 
-    setTimeout(() => {
-      const aiResponse = generateAIResponse(content);
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: aiResponse,
-      };
+    // Get current messages for context
+    const currentMessages = chats.find((c) => c.id === chatId)?.messages || [];
+    const apiMessages = [
+      ...currentMessages.map((m) => ({ role: m.role, content: m.content })),
+      { role: "user", content },
+    ];
 
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.id === chatId
-            ? { ...chat, messages: [...chat.messages, assistantMessage] }
-            : chat
-        )
+    let assistantContent = "";
+
+    try {
+      await streamChat(
+        apiMessages,
+        (chunk) => {
+          assistantContent += chunk;
+          setChats((prev) =>
+            prev.map((chat) => {
+              if (chat.id !== chatId) return chat;
+              const msgs = chat.messages;
+              const lastMsg = msgs[msgs.length - 1];
+              if (lastMsg?.role === "assistant") {
+                return {
+                  ...chat,
+                  messages: msgs.map((m, i) =>
+                    i === msgs.length - 1 ? { ...m, content: assistantContent } : m
+                  ),
+                };
+              }
+              return {
+                ...chat,
+                messages: [
+                  ...msgs,
+                  {
+                    id: (Date.now() + 1).toString(),
+                    role: "assistant" as const,
+                    content: assistantContent,
+                  },
+                ],
+              };
+            })
+          );
+        },
+        () => {
+          setIsLoading(false);
+        }
       );
+    } catch (error) {
+      console.error("Chat error:", error);
+      toast({
+        title: "त्रुटि",
+        description: error instanceof Error ? error.message : "कुछ गलत हो गया",
+        variant: "destructive",
+      });
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleNewChat = () => {
@@ -149,7 +226,7 @@ const Index = () => {
                 files={message.files}
               />
             ))}
-            {isLoading && (
+            {isLoading && messages[messages.length - 1]?.role === "user" && (
               <div className="flex gap-3 p-4">
                 <div className="w-10 h-10 rounded-full bg-card shadow-md border border-border flex items-center justify-center">
                   <div className="flex items-center gap-1">
