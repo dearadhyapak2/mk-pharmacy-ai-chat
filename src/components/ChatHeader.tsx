@@ -9,10 +9,10 @@ interface ChatHeaderProps {
 
 const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
   return (
-    <header className="gradient-header px-4 py-3 shadow-lg">
+    <header className="gradient-header px-3 py-2 shadow-lg">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-xl bg-card shadow-md overflow-hidden flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-card shadow-md overflow-hidden flex-shrink-0">
             <img
               src={pharmacyLogo}
               alt="MK Pharmacy Hub Logo"
@@ -20,10 +20,10 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
             />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-primary-foreground">
+            <h1 className="text-sm font-bold text-primary-foreground whitespace-nowrap">
               Mk pharmacy Hub AI
             </h1>
-            <p className="text-sm text-primary-foreground/80">
+            <p className="text-xs text-primary-foreground/80">
               आपकी स्वास्थ्य सहायक
             </p>
           </div>

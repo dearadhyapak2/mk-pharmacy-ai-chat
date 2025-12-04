@@ -205,7 +205,7 @@ const Index = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
+    <div className="flex flex-col h-[100dvh] bg-background">
       {/* Header */}
       <ChatHeader
         onMenuClick={() => {}}
@@ -213,7 +213,7 @@ const Index = () => {
       />
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {messages.length === 0 ? (
           <WelcomeScreen />
         ) : (
@@ -243,7 +243,9 @@ const Index = () => {
       </div>
 
       {/* Input Area */}
-      <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+      <div className="flex-shrink-0">
+        <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+      </div>
 
       {/* History Drawer */}
       <HistoryDrawer
