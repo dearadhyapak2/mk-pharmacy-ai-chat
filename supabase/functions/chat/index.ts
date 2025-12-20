@@ -6,6 +6,44 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Input validation schema - validate message structure and limits
+const MAX_MESSAGE_LENGTH = 4000;
+const MAX_MESSAGES_COUNT = 50;
+
+function validateMessages(messages: unknown): { role: string; content: string }[] {
+  if (!Array.isArray(messages)) {
+    throw new Error("Invalid input format");
+  }
+  
+  if (messages.length > MAX_MESSAGES_COUNT) {
+    throw new Error("Too many messages");
+  }
+  
+  const validRoles = ["user", "assistant", "system"];
+  
+  return messages.map((msg, index) => {
+    if (typeof msg !== "object" || msg === null) {
+      throw new Error(`Invalid message at index ${index}`);
+    }
+    
+    const { role, content } = msg as { role?: unknown; content?: unknown };
+    
+    if (typeof role !== "string" || !validRoles.includes(role)) {
+      throw new Error(`Invalid role at index ${index}`);
+    }
+    
+    if (typeof content !== "string" || content.length === 0) {
+      throw new Error(`Invalid content at index ${index}`);
+    }
+    
+    if (content.length > MAX_MESSAGE_LENGTH) {
+      throw new Error(`Message too long at index ${index}`);
+    }
+    
+    return { role, content };
+  });
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
@@ -13,45 +51,68 @@ serve(async (req) => {
   }
 
   try {
-    // Require authenticated user
+    // Check for authentication (optional - allow both authenticated and anonymous)
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    let isAuthenticated = false;
+    
+    if (authHeader) {
+      const supabaseUrl = Deno.env.get("SUPABASE_URL");
+      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+      
+      if (supabaseUrl && supabaseAnonKey) {
+        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+          global: { headers: { Authorization: authHeader } },
+        });
+
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        isAuthenticated = !userError && !!user;
+      }
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-    if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Backend config missing");
+    // Parse and validate input
+    let requestBody: unknown;
+    try {
+      requestBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "अमान्य request format" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
+    const { messages: rawMessages } = requestBody as { messages?: unknown };
+    
+    let validatedMessages: { role: string; content: string }[];
+    try {
+      validatedMessages = validateMessages(rawMessages);
+    } catch (validationError) {
+      console.error("Validation error:", validationError);
+      return new Response(
+        JSON.stringify({ error: "कृपया अपना message जाँचें और फिर से भेजें" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const { messages } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 
     if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+      console.error("LOVABLE_API_KEY is not configured");
+      return new Response(
+        JSON.stringify({ error: "सेवा अस्थायी रूप से अनुपलब्ध है" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    console.log("Received messages:", JSON.stringify(messages));
+    console.log("Processing chat request, authenticated:", isAuthenticated, "messages:", validatedMessages.length);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -89,7 +150,7 @@ serve(async (req) => {
 • Facebook: https://www.facebook.com/MkPharmacyHub
 • Snapchat: mkpharmacyhub1`,
           },
-          ...messages,
+          ...validatedMessages,
         ],
         stream: true,
       }),
@@ -109,16 +170,22 @@ serve(async (req) => {
         );
       }
       if (response.status === 402) {
-        return new Response(JSON.stringify({ error: "Credits समाप्त हो गए हैं।" }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "सेवा अस्थायी रूप से अनुपलब्ध है।" }),
+          {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          }
+        );
       }
 
-      return new Response(JSON.stringify({ error: "AI से जुड़ने में समस्या हुई" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "AI से जुड़ने में समस्या हुई" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     return new Response(response.body, {
@@ -127,7 +194,7 @@ serve(async (req) => {
   } catch (error) {
     console.error("Chat error:", error);
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: "एक तकनीकी समस्या हुई, कृपया बाद में कोशिश करें" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
