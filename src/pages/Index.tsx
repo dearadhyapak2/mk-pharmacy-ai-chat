@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useToast } from "@/hooks/use-toast";
 import ChatHeader from "@/components/ChatHeader";
 import ChatInput from "@/components/ChatInput";
 import ChatMessage from "@/components/ChatMessage";
 import WelcomeScreen from "@/components/WelcomeScreen";
 import HistoryDrawer from "@/components/HistoryDrawer";
+import { useAuth } from "@/hooks/useAuth";
 
 interface Message {
   id: string;
@@ -24,6 +25,8 @@ const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
 
 const Index = () => {
   const { toast } = useToast();
+  const { session } = useAuth();
+
   const [historyOpen, setHistoryOpen] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
@@ -32,6 +35,16 @@ const Index = () => {
 
   const currentChat = chats.find((chat) => chat.id === currentChatId);
   const messages = currentChat?.messages || [];
+
+  const authHeaders = useMemo(() => {
+    // RequireAuth ensures session exists, but keep safe defaults.
+    const token = session?.access_token;
+    return {
+      "Content-Type": "application/json",
+      apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    } as Record<string, string>;
+  }, [session]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -48,15 +61,15 @@ const Index = () => {
   ) => {
     const resp = await fetch(CHAT_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-      },
+      headers: authHeaders,
       body: JSON.stringify({ messages: chatMessages }),
     });
 
     if (!resp.ok) {
       const errorData = await resp.json().catch(() => ({}));
+      if (resp.status === 401) {
+        throw new Error("Session समाप्त हो गई है, कृपया फिर से login करें।");
+      }
       if (resp.status === 429) {
         throw new Error(errorData.error || "बहुत ज्यादा requests, कृपया थोड़ी देर बाद कोशिश करें।");
       }
@@ -132,15 +145,12 @@ const Index = () => {
 
     setChats((prev) =>
       prev.map((chat) =>
-        chat.id === chatId
-          ? { ...chat, messages: [...chat.messages, userMessage] }
-          : chat
+        chat.id === chatId ? { ...chat, messages: [...chat.messages, userMessage] } : chat
       )
     );
 
     setIsLoading(true);
 
-    // Get current messages for context
     const currentMessages = chats.find((c) => c.id === chatId)?.messages || [];
     const apiMessages = [
       ...currentMessages.map((m) => ({ role: m.role, content: m.content })),
@@ -186,7 +196,6 @@ const Index = () => {
         }
       );
     } catch (error) {
-      console.error("Chat error:", error);
       toast({
         title: "त्रुटि",
         description: error instanceof Error ? error.message : "कुछ गलत हो गया",
@@ -206,13 +215,8 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
-      {/* Header */}
-      <ChatHeader
-        onMenuClick={() => {}}
-        onHistoryClick={() => setHistoryOpen(true)}
-      />
+      <ChatHeader onMenuClick={() => {}} onHistoryClick={() => setHistoryOpen(true)} />
 
-      {/* Messages Area */}
       <div className="flex-1 overflow-y-auto min-h-0">
         {messages.length === 0 ? (
           <WelcomeScreen />
@@ -230,9 +234,18 @@ const Index = () => {
               <div className="flex gap-3 p-4">
                 <div className="w-10 h-10 rounded-full bg-card shadow-md border border-border flex items-center justify-center">
                   <div className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }}></span>
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }}></span>
-                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }}></span>
+                    <span
+                      className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    ></span>
+                    <span
+                      className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    ></span>
+                    <span
+                      className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    ></span>
                   </div>
                 </div>
               </div>
@@ -242,12 +255,10 @@ const Index = () => {
         )}
       </div>
 
-      {/* Input Area */}
       <div className="flex-shrink-0">
         <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
       </div>
 
-      {/* History Drawer */}
       <HistoryDrawer
         isOpen={historyOpen}
         onClose={() => setHistoryOpen(false)}
