@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { Chrome } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { Separator } from "@/components/ui/separator";
 
 const emailSchema = z.string().trim().email("सही email डालें").max(255);
 const passwordSchema = z
@@ -85,6 +87,23 @@ export default function AuthPage() {
     }
   };
 
+  const signInWithGoogle = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
+      if (error) throw error;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Google login में समस्या हुई";
+      toast({ title: "Google Login Error", description: msg, variant: "destructive" });
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-[100dvh] bg-background flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
@@ -92,7 +111,25 @@ export default function AuthPage() {
           <CardTitle>Login / Signup</CardTitle>
           <CardDescription>Chat करने के लिए login करें।</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <Button 
+            variant="outline" 
+            className="w-full" 
+            onClick={signInWithGoogle}
+            disabled={loading}
+          >
+            <Chrome className="mr-2 h-4 w-4" />
+            Google से Login करें
+          </Button>
+          
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <Separator className="w-full" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">या Email से</span>
+            </div>
+          </div>
           <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
             <TabsList className="grid grid-cols-2 w-full">
               <TabsTrigger value="login">Login</TabsTrigger>
