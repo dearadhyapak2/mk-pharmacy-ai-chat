@@ -51,22 +51,46 @@ serve(async (req) => {
   }
 
   try {
-    // Check for authentication (optional - allow both authenticated and anonymous)
+    // Require authentication
     const authHeader = req.headers.get("Authorization");
-    let isAuthenticated = false;
-    
-    if (authHeader) {
-      const supabaseUrl = Deno.env.get("SUPABASE_URL");
-      const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
-      
-      if (supabaseUrl && supabaseAnonKey) {
-        const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-          global: { headers: { Authorization: authHeader } },
-        });
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "कृपया पहले login करें" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
 
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        isAuthenticated = !userError && !!user;
-      }
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error("Supabase configuration missing");
+      return new Response(
+        JSON.stringify({ error: "सेवा अस्थायी रूप से अनुपलब्ध है" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.error("Auth error:", userError?.message);
+      return new Response(
+        JSON.stringify({ error: "कृपया पहले login करें" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
     // Parse and validate input
@@ -112,7 +136,7 @@ serve(async (req) => {
       );
     }
 
-    console.log("Processing chat request, authenticated:", isAuthenticated, "messages:", validatedMessages.length);
+    console.log("Processing chat request for user:", user.id, "messages:", validatedMessages.length);
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
