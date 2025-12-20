@@ -90,7 +90,7 @@ export default function AuthPage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Login / Signup</CardTitle>
-          <CardDescription>Chat use करने के लिए login जरूरी है।</CardDescription>
+          <CardDescription>Login करें या बिना login के Skip करें।</CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
@@ -171,6 +171,16 @@ export default function AuthPage() {
               </Form>
             </TabsContent>
           </Tabs>
+          
+          <div className="mt-4 text-center">
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              onClick={() => navigate("/")}
+            >
+              Skip करें - बिना login के chat करें
+            </Button>
+          </div>
         </CardContent>
       </Card>
     </div>
