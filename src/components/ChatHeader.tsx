@@ -1,6 +1,10 @@
-import { History } from "lucide-react";
+import { History, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import pharmacyLogo from "@/assets/pharmacy-logo.jpg";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface ChatHeaderProps {
   onMenuClick: () => void;
@@ -8,6 +12,19 @@ interface ChatHeaderProps {
 }
 
 const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast.error("Logout में समस्या हुई");
+    } else {
+      toast.success("Logout सफल!");
+      navigate("/auth");
+    }
+  };
+
   return (
     <header className="gradient-header px-3 py-2 shadow-lg">
       <div className="flex items-center justify-between">
@@ -29,14 +46,32 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
           </div>
         </div>
 
-        <Button
-          onClick={onHistoryClick}
-          variant="ghost"
-          className="flex items-center gap-2 text-primary-foreground hover:bg-primary-foreground/10 px-3"
-        >
-          <History className="h-5 w-5" />
-          <span className="text-sm font-medium">History</span>
-        </Button>
+        <div className="flex items-center gap-2">
+          {user && (
+            <span className="text-xs text-primary-foreground/80 truncate max-w-[120px] hidden sm:block">
+              {user.email}
+            </span>
+          )}
+
+          <Button
+            onClick={onHistoryClick}
+            variant="ghost"
+            size="icon"
+            className="text-primary-foreground hover:bg-primary-foreground/10"
+          >
+            <History className="h-5 w-5" />
+          </Button>
+
+          <Button
+            onClick={handleLogout}
+            variant="ghost"
+            size="icon"
+            className="text-primary-foreground hover:bg-primary-foreground/10"
+            title="Logout"
+          >
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </div>
       </div>
     </header>
   );
