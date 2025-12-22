@@ -81,7 +81,7 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
               variant="ghost"
               className="text-primary-foreground hover:bg-primary-foreground/10 text-sm"
             >
-              Login
+              Signup
             </Button>
           )}
         </div>
