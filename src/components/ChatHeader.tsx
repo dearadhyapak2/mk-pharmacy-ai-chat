@@ -48,32 +48,42 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
         </div>
 
         <div className="flex items-center gap-2">
-          {user && (
-            <Avatar className="h-8 w-8 border-2 border-primary-foreground/30">
-              <AvatarFallback className="bg-primary-foreground text-primary font-bold text-sm">
-                {user.email?.charAt(0).toUpperCase() || "U"}
-              </AvatarFallback>
-            </Avatar>
+          {user ? (
+            <>
+              <Avatar className="h-8 w-8 border-2 border-primary-foreground/30">
+                <AvatarFallback className="bg-primary-foreground text-primary font-bold text-sm">
+                  {user.email?.charAt(0).toUpperCase() || "U"}
+                </AvatarFallback>
+              </Avatar>
+
+              <Button
+                onClick={onHistoryClick}
+                variant="ghost"
+                size="icon"
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+              >
+                <History className="h-5 w-5" />
+              </Button>
+
+              <Button
+                onClick={handleLogout}
+                variant="ghost"
+                size="icon"
+                className="text-primary-foreground hover:bg-primary-foreground/10"
+                title="Logout"
+              >
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              onClick={() => navigate("/auth")}
+              variant="ghost"
+              className="text-primary-foreground hover:bg-primary-foreground/10 text-sm"
+            >
+              Login
+            </Button>
           )}
-
-          <Button
-            onClick={onHistoryClick}
-            variant="ghost"
-            size="icon"
-            className="text-primary-foreground hover:bg-primary-foreground/10"
-          >
-            <History className="h-5 w-5" />
-          </Button>
-
-          <Button
-            onClick={handleLogout}
-            variant="ghost"
-            size="icon"
-            className="text-primary-foreground hover:bg-primary-foreground/10"
-            title="Logout"
-          >
-            <LogOut className="h-5 w-5" />
-          </Button>
         </div>
       </div>
     </header>
