@@ -127,7 +127,7 @@ serve(async (req) => {
         messages: [
           {
             role: "system",
-            content: `आप Mk pharmacy Hub AI हैं - एक हिंदी भाषा का स्वास्थ्य सहायक。
+            content: `आप Mukesh Kumar Deshmukh के AI Assistant हैं - FetterHub AI।
 
 आपके नियम:
 1. हमेशा हिंदी में जवाब दें, सरल और आसान शब्दों में
