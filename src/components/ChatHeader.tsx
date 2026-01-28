@@ -1,7 +1,7 @@
 import { History, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import pharmacyLogo from "@/assets/pharmacy-logo.jpg";
+import fetterhubLogo from "@/assets/fetterhub-logo.jpg";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -32,14 +32,14 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-card shadow-md overflow-hidden flex-shrink-0">
             <img
-              src={pharmacyLogo}
-              alt="MK Pharmacy Hub Logo"
+              src={fetterhubLogo}
+              alt="FetterHub AI Logo"
               className="w-full h-full object-cover"
             />
           </div>
           <div>
             <h1 className="text-sm font-bold text-primary-foreground whitespace-nowrap">
-              Mk pharmacy Hub AI
+              FetterHub AI
             </h1>
             <p className="text-xs text-primary-foreground/80">
               आपकी स्वास्थ्य सहायक
