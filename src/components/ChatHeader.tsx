@@ -41,9 +41,6 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
             <h1 className="text-sm font-bold text-primary-foreground whitespace-nowrap">
               FetterHub AI
             </h1>
-            <p className="text-xs text-primary-foreground/80">
-              आपकी स्वास्थ्य सहायक
-            </p>
           </div>
         </div>
 
