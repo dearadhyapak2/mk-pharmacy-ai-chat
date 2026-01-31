@@ -6,7 +6,7 @@ const WelcomeScreen = () => {
           नमस्ते! <span className="inline-block animate-wave">👋</span>
         </h1>
         <p className="text-lg text-muted-foreground">
-          मैं Mukesh Kumar Deshmukh हूँ। मैं आपकी किस प्रकार मदद कर सकता हूँ?
+          मैं आपकी किस प्रकार मदद कर सकता हूँ?
         </p>
       </div>
     </div>
