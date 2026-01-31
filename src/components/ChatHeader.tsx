@@ -1,7 +1,7 @@
 import { History, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import fetterhubLogo from "@/assets/fetterhub-logo.jpg";
+import fetterAiLogo from "@/assets/fetter-ai-logo.jpg";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -32,7 +32,7 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-card shadow-md overflow-hidden flex-shrink-0">
             <img
-              src={fetterhubLogo}
+              src={fetterAiLogo}
               alt="Fetter AI Logo"
               className="w-full h-full object-cover"
             />
