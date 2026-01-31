@@ -33,13 +33,13 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
           <div className="w-8 h-8 rounded-lg bg-card shadow-md overflow-hidden flex-shrink-0">
             <img
               src={fetterhubLogo}
-              alt="FetterHub AI Logo"
+              alt="Fetter AI Logo"
               className="w-full h-full object-cover"
             />
           </div>
           <div>
             <h1 className="text-sm font-bold text-primary-foreground whitespace-nowrap">
-              FetterHub AI
+              Fetter AI
             </h1>
           </div>
         </div>
