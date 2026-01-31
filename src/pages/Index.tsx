@@ -7,11 +7,17 @@ import WelcomeScreen from "@/components/WelcomeScreen";
 import HistoryDrawer from "@/components/HistoryDrawer";
 import { useAuth } from "@/hooks/useAuth";
 
+interface AttachedFile {
+  name: string;
+  type: string;
+  url?: string; // base64 data URL for images
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  files?: { name: string; type: string }[];
+  files?: AttachedFile[];
 }
 
 interface Chat {
@@ -21,7 +27,23 @@ interface Chat {
   messages: Message[];
 }
 
+interface MessageContent {
+  type: "text" | "image_url";
+  text?: string;
+  image_url?: { url: string };
+}
+
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+
+// Convert file to base64 data URL
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
 
 const Index = () => {
   const { toast } = useToast();
@@ -37,7 +59,6 @@ const Index = () => {
   const messages = currentChat?.messages || [];
 
   const authHeaders = useMemo(() => {
-    // RequireAuth ensures session exists, but keep safe defaults.
     const token = session?.access_token;
     return {
       "Content-Type": "application/json",
@@ -55,7 +76,7 @@ const Index = () => {
   }, [messages]);
 
   const streamChat = async (
-    chatMessages: { role: string; content: string }[],
+    chatMessages: { role: string; content: string | MessageContent[] }[],
     onDelta: (text: string) => void,
     onDone: () => void
   ) => {
@@ -121,13 +142,30 @@ const Index = () => {
   };
 
   const handleSendMessage = async (content: string, files?: File[]) => {
-    const fileAttachments = files?.map((f) => ({ name: f.name, type: f.type }));
+    // Process files - convert images to base64
+    const processedFiles: AttachedFile[] = [];
+    const imageBase64s: string[] = [];
+
+    if (files && files.length > 0) {
+      for (const file of files) {
+        if (file.type.startsWith("image/")) {
+          const base64 = await fileToBase64(file);
+          processedFiles.push({ name: file.name, type: file.type, url: base64 });
+          imageBase64s.push(base64);
+        } else {
+          processedFiles.push({ name: file.name, type: file.type });
+        }
+      }
+    }
 
     let chatId = currentChatId;
     if (!chatId) {
+      const title = content.trim() 
+        ? content.slice(0, 30) + (content.length > 30 ? "..." : "")
+        : "📸 Photo Analysis";
       const newChat: Chat = {
         id: Date.now().toString(),
-        title: content.slice(0, 30) + (content.length > 30 ? "..." : ""),
+        title,
         date: new Date().toLocaleDateString("hi-IN"),
         messages: [],
       };
@@ -139,8 +177,8 @@ const Index = () => {
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
-      content,
-      files: fileAttachments,
+      content: content || "इस photo को analyze करें",
+      files: processedFiles.length > 0 ? processedFiles : undefined,
     };
 
     setChats((prev) =>
@@ -151,11 +189,37 @@ const Index = () => {
 
     setIsLoading(true);
 
+    // Build API messages with multimodal support
     const currentMessages = chats.find((c) => c.id === chatId)?.messages || [];
-    const apiMessages = [
-      ...currentMessages.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user", content },
-    ];
+    const apiMessages: { role: string; content: string | MessageContent[] }[] = currentMessages.map((m) => {
+      // Check if message has image files
+      const imageFiles = m.files?.filter(f => f.type.startsWith("image/") && f.url);
+      if (imageFiles && imageFiles.length > 0) {
+        const contentParts: MessageContent[] = [];
+        imageFiles.forEach(img => {
+          if (img.url) {
+            contentParts.push({ type: "image_url", image_url: { url: img.url } });
+          }
+        });
+        if (m.content) {
+          contentParts.push({ type: "text", text: m.content });
+        }
+        return { role: m.role, content: contentParts };
+      }
+      return { role: m.role, content: m.content };
+    });
+
+    // Add current message
+    if (imageBase64s.length > 0) {
+      const contentParts: MessageContent[] = [];
+      imageBase64s.forEach(base64 => {
+        contentParts.push({ type: "image_url", image_url: { url: base64 } });
+      });
+      contentParts.push({ type: "text", text: content || "इस photo को analyze करें" });
+      apiMessages.push({ role: "user", content: contentParts });
+    } else {
+      apiMessages.push({ role: "user", content });
+    }
 
     let assistantContent = "";
 

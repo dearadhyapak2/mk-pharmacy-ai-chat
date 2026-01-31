@@ -1,5 +1,5 @@
-import { User, Bot, FileText, Image as ImageIcon } from "lucide-react";
-import pharmacyLogo from "@/assets/pharmacy-logo.jpg";
+import { User, FileText, Image as ImageIcon } from "lucide-react";
+import fetterAiLogo from "@/assets/fetter-ai-logo.jpg";
 
 interface AttachedFile {
   name: string;
@@ -23,6 +23,9 @@ const ChatMessage = ({ role, content, files }: ChatMessageProps) => {
     return <FileText className="h-4 w-4" />;
   };
 
+  const imageFiles = files?.filter(f => f.type.startsWith("image/") && f.url);
+  const otherFiles = files?.filter(f => !f.type.startsWith("image/") || !f.url);
+
   return (
     <div
       className={`flex gap-3 p-4 animate-fade-in ${
@@ -37,7 +40,7 @@ const ChatMessage = ({ role, content, files }: ChatMessageProps) => {
         {isUser ? (
           <User className="h-5 w-5 text-primary-foreground" />
         ) : (
-          <img src={pharmacyLogo} alt="AI" className="w-full h-full object-cover" />
+          <img src={fetterAiLogo} alt="Fetter AI" className="w-full h-full object-cover" />
         )}
       </div>
 
@@ -47,10 +50,28 @@ const ChatMessage = ({ role, content, files }: ChatMessageProps) => {
           isUser ? "items-end" : "items-start"
         }`}
       >
-        {/* Attached Files */}
-        {files && files.length > 0 && (
+        {/* Image Previews */}
+        {imageFiles && imageFiles.length > 0 && (
           <div className={`flex flex-wrap gap-2 ${isUser ? "justify-end" : ""}`}>
-            {files.map((file, index) => (
+            {imageFiles.map((file, index) => (
+              <div
+                key={index}
+                className="rounded-lg overflow-hidden border border-border shadow-sm"
+              >
+                <img
+                  src={file.url}
+                  alt={file.name}
+                  className="max-w-[200px] max-h-[200px] object-cover"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Other Attached Files */}
+        {otherFiles && otherFiles.length > 0 && (
+          <div className={`flex flex-wrap gap-2 ${isUser ? "justify-end" : ""}`}>
+            {otherFiles.map((file, index) => (
               <div
                 key={index}
                 className="flex items-center gap-2 bg-secondary px-3 py-1.5 rounded-lg text-sm"

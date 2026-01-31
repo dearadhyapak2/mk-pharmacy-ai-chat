@@ -10,7 +10,18 @@ const corsHeaders = {
 const MAX_MESSAGE_LENGTH = 4000;
 const MAX_MESSAGES_COUNT = 50;
 
-function validateMessages(messages: unknown): { role: string; content: string }[] {
+interface MessageContent {
+  type: "text" | "image_url";
+  text?: string;
+  image_url?: { url: string };
+}
+
+interface ChatMessage {
+  role: string;
+  content: string | MessageContent[];
+}
+
+function validateMessages(messages: unknown): ChatMessage[] {
   if (!Array.isArray(messages)) {
     throw new Error("Invalid input format");
   }
@@ -32,15 +43,35 @@ function validateMessages(messages: unknown): { role: string; content: string }[
       throw new Error(`Invalid role at index ${index}`);
     }
     
-    if (typeof content !== "string" || content.length === 0) {
-      throw new Error(`Invalid content at index ${index}`);
+    // Content can be string or array (for multimodal messages)
+    if (typeof content === "string") {
+      if (content.length === 0) {
+        throw new Error(`Invalid content at index ${index}`);
+      }
+      if (content.length > MAX_MESSAGE_LENGTH) {
+        throw new Error(`Message too long at index ${index}`);
+      }
+      return { role, content };
     }
     
-    if (content.length > MAX_MESSAGE_LENGTH) {
-      throw new Error(`Message too long at index ${index}`);
+    // Handle multimodal content (array of text/image parts)
+    if (Array.isArray(content)) {
+      const validContent = content.every((part: unknown) => {
+        if (typeof part !== "object" || part === null) return false;
+        const p = part as { type?: string; text?: string; image_url?: { url?: string } };
+        if (p.type === "text" && typeof p.text === "string") return true;
+        if (p.type === "image_url" && p.image_url?.url) return true;
+        return false;
+      });
+      
+      if (!validContent) {
+        throw new Error(`Invalid multimodal content at index ${index}`);
+      }
+      
+      return { role, content: content as MessageContent[] };
     }
     
-    return { role, content };
+    throw new Error(`Invalid content type at index ${index}`);
   });
 }
 
@@ -87,7 +118,7 @@ serve(async (req) => {
     
     const { messages: rawMessages } = requestBody as { messages?: unknown };
     
-    let validatedMessages: { role: string; content: string }[];
+    let validatedMessages: ChatMessage[];
     try {
       validatedMessages = validateMessages(rawMessages);
     } catch (validationError) {
@@ -135,6 +166,12 @@ serve(async (req) => {
 3. जवाब छोटे और सटीक रखें
 4. यदि कोई गंभीर स्वास्थ्य समस्या हो तो डॉक्टर से मिलने की सलाह दें
 5. हमेशा विनम्र और मददगार रहें
+
+📸 Photo Analysis:
+- जब user photo/image भेजे, तो उसका detailed analysis हिंदी में दें
+- Photo में दिखने वाली चीज़ों को identify करें
+- Medical/health related photos के लिए relevant जानकारी दें
+- Text/document photos के लिए OCR जैसा काम करें और text extract करें
 
 याद रखें: आप एक स्वास्थ्य सहायक हैं, डॉक्टर नहीं। गंभीर मामलों में हमेशा डॉक्टर की सलाह लेने को कहें।
 
