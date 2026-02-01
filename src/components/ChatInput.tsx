@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Send, Paperclip, X, FileText, Image as ImageIcon } from "lucide-react";
+import { Send, Paperclip, X, FileText, Image as ImageIcon, Camera } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ChatInputProps {
@@ -11,6 +11,7 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +37,14 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
     }
   };
 
+  const handleCameraCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    setAttachedFiles((prev) => [...prev, ...files]);
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = "";
+    }
+  };
+
   const removeFile = (index: number) => {
     setAttachedFiles((prev) => prev.filter((_, i) => i !== index));
   };
@@ -48,7 +57,7 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
   };
 
   return (
-    <div className="p-4 bg-card border-t border-border">
+    <div className="p-3 bg-card border-t border-border">
       {/* Attached Files Preview */}
       {attachedFiles.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-3">
@@ -72,7 +81,7 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="flex items-center gap-3">
+      <form onSubmit={handleSubmit} className="flex items-center gap-2">
         {/* File Upload Button */}
         <input
           type="file"
@@ -82,14 +91,35 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
           className="hidden"
           accept="image/*,.pdf,.doc,.docx,.txt"
         />
+        
+        {/* Camera Capture Input */}
+        <input
+          type="file"
+          ref={cameraInputRef}
+          onChange={handleCameraCapture}
+          className="hidden"
+          accept="image/*"
+          capture="environment"
+        />
+
         <Button
           type="button"
           variant="ghost"
           size="icon"
           onClick={() => fileInputRef.current?.click()}
-          className="text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full flex-shrink-0"
+          className="text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full flex-shrink-0 h-9 w-9"
         >
           <Paperclip className="h-5 w-5" />
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => cameraInputRef.current?.click()}
+          className="text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full flex-shrink-0 h-9 w-9"
+        >
+          <Camera className="h-5 w-5" />
         </Button>
 
         {/* Text Input */}
@@ -99,9 +129,9 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="अपना संदेश लिखें..."
-            className="w-full px-4 py-3 bg-secondary rounded-full text-foreground 
-              placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+            placeholder="कुछ पूछें..."
+            className="w-full px-4 py-2.5 bg-secondary rounded-full text-foreground 
+              placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 text-sm"
           />
         </div>
 
@@ -110,10 +140,10 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
           type="submit"
           size="icon"
           disabled={isLoading || (!message.trim() && attachedFiles.length === 0)}
-          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl h-12 w-12
-            flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground rounded-full h-10 w-10
+            flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Send className="h-5 w-5" />
+          <Send className="h-4 w-4" />
         </Button>
       </form>
     </div>

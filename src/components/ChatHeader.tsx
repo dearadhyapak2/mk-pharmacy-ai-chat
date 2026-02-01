@@ -27,28 +27,26 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
   };
 
   return (
-    <header className="gradient-header px-3 py-2 shadow-lg">
+    <header className="bg-card border-b border-border px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-card shadow-md overflow-hidden flex-shrink-0">
+          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
             <img
               src={fetterAiLogo}
-              alt="Fetter AI Logo"
+              alt="Logo"
               className="w-full h-full object-cover"
             />
           </div>
-          <div>
-            <h1 className="text-sm font-bold text-primary-foreground whitespace-nowrap">
-              Fetter AI
-            </h1>
-          </div>
+          <span className="text-base font-medium text-foreground">
+            Fetter
+          </span>
         </div>
 
         <div className="flex items-center gap-2">
           {user ? (
             <>
-              <Avatar className="h-8 w-8 border-2 border-primary-foreground/30">
-                <AvatarFallback className="bg-primary-foreground text-primary font-bold text-sm">
+              <Avatar className="h-8 w-8">
+                <AvatarFallback className="bg-secondary text-foreground font-medium text-sm">
                   {user.email?.charAt(0).toUpperCase() || "U"}
                 </AvatarFallback>
               </Avatar>
@@ -57,7 +55,7 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
                 onClick={onHistoryClick}
                 variant="ghost"
                 size="icon"
-                className="text-primary-foreground hover:bg-primary-foreground/10"
+                className="text-muted-foreground hover:text-foreground hover:bg-secondary"
               >
                 <History className="h-5 w-5" />
               </Button>
@@ -66,7 +64,7 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
                 onClick={handleLogout}
                 variant="ghost"
                 size="icon"
-                className="text-primary-foreground hover:bg-primary-foreground/10"
+                className="text-muted-foreground hover:text-foreground hover:bg-secondary"
                 title="Logout"
               >
                 <LogOut className="h-5 w-5" />
@@ -76,9 +74,9 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
             <Button
               onClick={() => navigate("/auth")}
               variant="ghost"
-              className="text-primary-foreground hover:bg-primary-foreground/10 text-sm"
+              className="text-muted-foreground hover:text-foreground hover:bg-secondary text-sm"
             >
-              Signup
+              Login
             </Button>
           )}
         </div>
