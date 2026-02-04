@@ -38,7 +38,7 @@ const ChatHeader = ({ onMenuClick, onHistoryClick }: ChatHeaderProps) => {
             />
           </div>
           <span className="text-base font-medium text-foreground">
-            Fetter
+            Fetter AI
           </span>
         </div>
 
