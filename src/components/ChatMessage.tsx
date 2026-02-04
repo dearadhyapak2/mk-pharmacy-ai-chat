@@ -26,6 +26,42 @@ const ChatMessage = ({ role, content, files }: ChatMessageProps) => {
   const imageFiles = files?.filter(f => f.type.startsWith("image/") && f.url);
   const otherFiles = files?.filter(f => !f.type.startsWith("image/") || !f.url);
 
+  // Parse markdown images from content
+  const renderContent = (text: string) => {
+    const imageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const parts: (string | JSX.Element)[] = [];
+    let lastIndex = 0;
+    let match;
+
+    while ((match = imageRegex.exec(text)) !== null) {
+      // Add text before the image
+      if (match.index > lastIndex) {
+        parts.push(text.slice(lastIndex, match.index));
+      }
+      
+      // Add the image
+      const [, alt, src] = match;
+      parts.push(
+        <div key={match.index} className="my-3 rounded-lg overflow-hidden border border-border shadow-sm inline-block">
+          <img
+            src={src}
+            alt={alt || "Generated Image"}
+            className="max-w-full max-h-[400px] object-contain"
+          />
+        </div>
+      );
+      
+      lastIndex = match.index + match[0].length;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      parts.push(text.slice(lastIndex));
+    }
+
+    return parts.length > 0 ? parts : text;
+  };
+
   return (
     <div
       className={`flex gap-3 p-4 animate-fade-in ${
@@ -92,7 +128,7 @@ const ChatMessage = ({ role, content, files }: ChatMessageProps) => {
                 : "bg-card text-foreground rounded-bl-md shadow-sm border border-border"
             }`}
         >
-          {content}
+          {renderContent(content)}
         </div>
       </div>
     </div>

@@ -1,21 +1,27 @@
 import { useState, useRef } from "react";
-import { Send, Paperclip, X, FileText, Image as ImageIcon, Camera } from "lucide-react";
+import { Send, Paperclip, X, FileText, Image as ImageIcon, Camera, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface ChatInputProps {
   onSendMessage: (message: string, files?: File[]) => void;
+  onGenerateImage?: (prompt: string) => void;
   isLoading: boolean;
 }
 
-const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
+const ChatInput = ({ onSendMessage, onGenerateImage, isLoading }: ChatInputProps) => {
   const [message, setMessage] = useState("");
   const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
+  const [isImageMode, setIsImageMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() || attachedFiles.length > 0) {
+    if (isImageMode && message.trim() && onGenerateImage) {
+      onGenerateImage(message);
+      setMessage("");
+      setIsImageMode(false);
+    } else if (message.trim() || attachedFiles.length > 0) {
       onSendMessage(message, attachedFiles);
       setMessage("");
       setAttachedFiles([]);
@@ -116,6 +122,21 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
           type="button"
           variant="ghost"
           size="icon"
+          onClick={() => setIsImageMode(!isImageMode)}
+          className={`hover:bg-secondary rounded-full flex-shrink-0 h-9 w-9 ${
+            isImageMode 
+              ? "text-primary bg-primary/10" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+          title="Image Generate करें"
+        >
+          <Sparkles className="h-5 w-5" />
+        </Button>
+
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => cameraInputRef.current?.click()}
           className="text-muted-foreground hover:text-foreground hover:bg-secondary rounded-full flex-shrink-0 h-9 w-9"
         >
@@ -129,9 +150,13 @@ const ChatInput = ({ onSendMessage, isLoading }: ChatInputProps) => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="कुछ पूछें..."
-            className="w-full px-4 py-2.5 bg-secondary rounded-full text-foreground 
-              placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 text-sm"
+            placeholder={isImageMode ? "Image describe करें... (जैसे: सुंदर पहाड़ों की तस्वीर)" : "कुछ पूछें..."}
+            className={`w-full px-4 py-2.5 rounded-full text-foreground 
+              placeholder:text-muted-foreground focus:outline-none focus:ring-1 text-sm ${
+                isImageMode 
+                  ? "bg-primary/10 focus:ring-primary" 
+                  : "bg-secondary focus:ring-primary/50"
+              }`}
           />
         </div>
 

@@ -34,6 +34,7 @@ interface MessageContent {
 }
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`;
+const IMAGE_GEN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`;
 
 // Convert file to base64 data URL
 const fileToBase64 = (file: File): Promise<string> => {
@@ -277,6 +278,72 @@ const Index = () => {
     setCurrentChatId(id);
   };
 
+  const handleGenerateImage = async (prompt: string) => {
+    let chatId = currentChatId;
+    if (!chatId) {
+      const title = `🎨 ${prompt.slice(0, 25)}${prompt.length > 25 ? "..." : ""}`;
+      const newChat: Chat = {
+        id: Date.now().toString(),
+        title,
+        date: new Date().toLocaleDateString("hi-IN"),
+        messages: [],
+      };
+      setChats((prev) => [newChat, ...prev]);
+      chatId = newChat.id;
+      setCurrentChatId(chatId);
+    }
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      role: "user",
+      content: `🎨 Image Generate: ${prompt}`,
+    };
+
+    setChats((prev) =>
+      prev.map((chat) =>
+        chat.id === chatId ? { ...chat, messages: [...chat.messages, userMessage] } : chat
+      )
+    );
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch(IMAGE_GEN_URL, {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ prompt }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Image generate करने में समस्या हुई");
+      }
+
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: `${data.message}\n\n![Generated Image](${data.imageUrl})`,
+      };
+
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId
+            ? { ...chat, messages: [...chat.messages, assistantMessage] }
+            : chat
+        )
+      );
+    } catch (error) {
+      toast({
+        title: "त्रुटि",
+        description: error instanceof Error ? error.message : "Image generate नहीं हो पाई",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
       <ChatHeader onMenuClick={() => {}} onHistoryClick={() => setHistoryOpen(true)} />
@@ -320,7 +387,11 @@ const Index = () => {
       </div>
 
       <div className="flex-shrink-0">
-        <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} />
+        <ChatInput 
+          onSendMessage={handleSendMessage} 
+          onGenerateImage={handleGenerateImage}
+          isLoading={isLoading} 
+        />
       </div>
 
       <HistoryDrawer
