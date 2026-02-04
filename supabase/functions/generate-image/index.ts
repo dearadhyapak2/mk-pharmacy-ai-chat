@@ -89,20 +89,60 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    console.log("Image generation response received");
+    console.log("Image generation response:", JSON.stringify(data, null, 2));
 
-    const imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    const textContent = data.choices?.[0]?.message?.content;
+    // Try multiple possible response structures
+    let imageUrl = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+    
+    // Alternative structure
+    if (!imageUrl) {
+      imageUrl = data.choices?.[0]?.message?.content?.find?.(
+        (part: any) => part.type === "image_url"
+      )?.image_url?.url;
+    }
+    
+    // Another alternative - direct image in content
+    if (!imageUrl && Array.isArray(data.choices?.[0]?.message?.content)) {
+      const imagePart = data.choices[0].message.content.find(
+        (part: any) => part.type === "image" || part.image_url
+      );
+      if (imagePart) {
+        imageUrl = imagePart.image_url?.url || imagePart.url;
+      }
+    }
+
+    // Check for inline_data format
+    if (!imageUrl && data.choices?.[0]?.message?.content) {
+      const content = data.choices[0].message.content;
+      if (Array.isArray(content)) {
+        for (const part of content) {
+          if (part.inline_data?.data) {
+            imageUrl = `data:${part.inline_data.mime_type || 'image/png'};base64,${part.inline_data.data}`;
+            break;
+          }
+        }
+      }
+    }
+
+    const textContent = typeof data.choices?.[0]?.message?.content === 'string' 
+      ? data.choices[0].message.content 
+      : null;
 
     if (!imageUrl) {
+      console.error("No image found in response. Full response:", JSON.stringify(data));
       return new Response(
-        JSON.stringify({ error: "Image generate नहीं हो पाई, कृपया फिर से कोशिश करें" }),
+        JSON.stringify({ 
+          error: "Image generate नहीं हो पाई, कृपया फिर से कोशिश करें",
+          debug: "No image URL found in response" 
+        }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         }
       );
     }
+
+    console.log("Image URL found successfully");
 
     return new Response(
       JSON.stringify({ 
