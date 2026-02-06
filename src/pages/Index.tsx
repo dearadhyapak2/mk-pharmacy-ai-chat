@@ -346,9 +346,11 @@ const Index = () => {
 
   return (
     <div className="flex flex-col h-[100dvh] bg-background">
-      <ChatHeader onMenuClick={() => {}} onHistoryClick={() => setHistoryOpen(true)} />
+      <header>
+        <ChatHeader onMenuClick={() => {}} onHistoryClick={() => setHistoryOpen(true)} />
+      </header>
 
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <main className="flex-1 overflow-y-auto min-h-0">
         {messages.length === 0 ? (
           <WelcomeScreen />
         ) : (
@@ -384,15 +386,15 @@ const Index = () => {
             <div ref={messagesEndRef} />
           </div>
         )}
-      </div>
+      </main>
 
-      <div className="flex-shrink-0">
+      <footer className="flex-shrink-0">
         <ChatInput 
           onSendMessage={handleSendMessage} 
           onGenerateImage={handleGenerateImage}
           isLoading={isLoading} 
         />
-      </div>
+      </footer>
 
       <HistoryDrawer
         isOpen={historyOpen}
